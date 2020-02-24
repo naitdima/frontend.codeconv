@@ -48,6 +48,26 @@ components/
 |- SettingsCheckboxLaunchOnStartup.vue
 ```
 
+#### Имена компонентов в JS указываются в PascalCase, в разметке в kebab-case
+```
+<search-input/>
+```
+```
+{
+  name: 'search-input',
+}
+```
+```
+import SearchInput from '...';
+import PNLTable from '...';
+{
+  components: {
+    SearchInput,
+    'pnl-table': PNLTable,
+  },
+}
+```
+
 #### Входные параметры
 
 Входные параметры должны всегда использовать camelCase при определении, но kebab-case в шаблонах.
@@ -199,17 +219,32 @@ convertDataToObject(data) { // ...}
 
 #### Нельзя использовать глагол get в геттерах
 
-Например, вместо `getDate()` следует писать `date()`. Геттер — метод, работающий только с полями своего объекта.
+Например, вместо `getActiveFields()` следует писать `activeFields()`. Геттер — метод, работающий только с полями своего объекта.
 ```
 class User {
   constructor() {
-    this._customFields = ...; 
+    this.fields = ...; 
   }
 
-  get customFields() { 
-    return this._customFields;
+  get activeFields() { 
+    return this.fields.filter(field => field.is_active);
   }
 }
+```
+```
+computed: {
+  activeFields() {
+    return this.fields.filter(field => field.is_active);
+  },
+},
+```
+
+#### Ключи объектов следует именовать в snake_case (для единообразия с данными, приходящими с бэкенда)
+```
+const transaction = {
+  report_date: ...,
+  request_id: ...,
+};
 ```
 
 #### Итерируемый элемент массива должен одинаково именоваться в цепочках методов массива:
@@ -230,6 +265,20 @@ const answeredQuestions = questionIds
 const questionIds = questions
   .map(question => question.id)
   .filter(id => this.value[id]);
+```
+
+#### Аккумулятор в reduce должен называться также, как и переменная с результирующим значением.
+```
+const uniqueCategories = this.categories.reduce((uniqueCategories, category) => {
+  // ...
+}, []);
+```
+```
+totalByCategories() {
+  return this.categories.reduce((totalByCategories, category) => {
+    // ...
+  }, 0);
+},
 ```
 
 ### Структура компонентов
@@ -297,9 +346,7 @@ computed: {
 },
 ```
 
-#### Определение входных параметров
-
-Входные параметры должны быть определены как можно более подробно.
+#### Входные параметры должны быть определены как можно более подробно.
 
 ```
 props: {
@@ -318,10 +365,10 @@ props: {
 },
 ```
 
-Входные параметры непримитивного типа должны иметь соответствующее значение по умолчанию.
+#### Входные параметры непримитивного типа должны иметь соответствующее значение по умолчанию.
 
 ```
-props: { 
+props: {
   project: {
     type: Object,
     default() {
@@ -332,6 +379,19 @@ props: {
     type: Array,
     default() {
       return [];
+    },
+  },
+}
+```
+
+#### Значения по умолчанию стоит возвращаться из функции только для объектов или массивов:
+```
+props: {
+  title: String,
+  project: {
+    type: Object,
+    default() {
+      return {};
     },
   },
 }
@@ -365,18 +425,6 @@ computed: {
 }
 ```
 
-#### Локальные стили компонента
-
-Для приложений стили в корневом компоненте `App` и в компонентах шаблона могут быть глобальными, но во всех остальных компонентах должны быть локальными.
-
-```
-<style scoped>
-  .kpi-list { 
-    background-color: ligthgrey;
-  }
-</style>
-```
-
 ### Разметка шаблона
 
 #### Самозакрывающиеся теги компонентов
@@ -389,9 +437,8 @@ computed: {
 <my-component/>
 ```
 
-#### Элементы с несколькими атрибутами
-
-Элементы с несколькими атрибутами могут распологаться на одной строке, если колличество символов в строке не превышает 80. Иначе атрибуты должны располагаться на нескольких строках, по одному атрибуту на строку.
+#### Элементы с несколькими атрибутами могут распологаться на одной строке, если колличество символов в строке не превышает 80. 
+Иначе атрибуты должны располагаться на нескольких строках, по одному атрибуту на строку.
 
 ```
 <img src="https://vuejs.org/images/logo.png" alt="Vue Logo">
@@ -407,7 +454,7 @@ computed: {
 />
 ```
 
-Атрибуты элементов (в том числе компонентов) должны быть упорядочены консистентно:
+#### Атрибуты элементов (в том числе компонентов) должны быть упорядочены консистентно:
 
 1. Определение
     - `is`
@@ -438,6 +485,15 @@ computed: {
 11. Содержимое (перезаписывает содержимое элемента)
     - `v-html`
     - `v-text`
+    
+#### Порядок props
+```
+<component
+  prop="foo"
+  prop3
+  :prop2="bar"
+/>
+```
 
 #### Значения атрибутов в кавычках
 
@@ -453,7 +509,7 @@ computed: {
 ```
 <input :value="newTodoText">
 <input @focus="onFocus">
-<template #header> 
+<template #header>
   <h1>Заголовок страницы</h1>
 </template>
 ```
@@ -554,6 +610,49 @@ computed: {
 },
 ```
 
+#### Динамические классы
+Хорошо:
+```
+<div :class="['list', { 'disabled': isDisabled }]">
+
+<div 
+  :class="[
+    'tab',
+    {
+      'active': isActive,
+      'disabled': isDisabled,
+    }
+  ]"
+>
+```
+
+#### Форматирование выводимых данных должно происходить непосредственно при выводе в разметку
+Плохо:
+```
+<span>{{ totalByCategories }}</span>
+// ...
+computed: {
+  totalByCategories() {
+    const totalByCategories = this.categories.reduce((totalByCategories, category) => {
+      // ...
+    }, 0);
+    return this.formatMoney(totalByCategories);
+  },
+}
+```
+Хорошо:
+```
+<span>{{ formatMoney(totalByCategories) }}</span>
+// ...
+computed: {
+  totalByCategories() {
+    return this.categories.reduce((totalByCategories, category) => {
+      // ...
+    }, 0);
+  },
+}
+```
+
 #### Переводы
 Для текстов нужно добавлять переводы и указывать вывод через функцию `t()`
 
@@ -564,6 +663,34 @@ computed: {
 Хорошо:
 ```
 <ui-input :placeholder="t('Введите имя')" />
+```
+
+#### Абзацы
+Для разбиения текста на абзацы следует использовать `<p>`
+
+`<br>` стоит использовать, когда строку в рамках одного абзаца нужно перенести раньше места автоматического переноса
+```
+<p>
+  {{ t('Повседневная практика показывает,') }}<br>
+  {{ t('что постоянный количественный рост и сфера нашей активности позволяет оценить значение существенных финансовых и административных условий.') }}
+</p>
+```
+
+#### Не пытаться уместить обычный текст в видимой области редактора
+При добавлении большого текста не стоит придерживаться правила с переносом атрибутов, т.к. обращаться к нему так часто не приходится.
+
+Плохо:
+```
+<p>
+  {{ t('Повседневная практика показывает, что постоянный количественный рост и сфера нашей активности') }}
+  {{ t('позволяет оценить значение существенных финансовых и административных условий.') }}
+  {{ t('С другой стороны реализация намеченных плановых заданий способствует подготовки и реализации позиций,') }}
+  {{ t('занимаемых участниками в отношении поставленных задач.') }}
+</p>
+```
+Хорошо:
+```
+<p>{{ t('Повседневная практика показывает, что постоянный количественный рост и сфера нашей активности позволяет оценить значение существенных финансовых и административных условий. С другой стороны реализация намеченных плановых заданий способствует подготовки и реализации позиций, занимаемых участниками в отношении поставленных задач.') }}</p>
 ```
 
 ### Структура функционального кода
@@ -586,6 +713,8 @@ const activeUsers = users
 ```
 const activeUsers = users.filter(user => user.is_active);
 ```
+
+#### Для сортировки массивов следует использовать колбэки из ui-utils 
 
 #### Для проверки на несколько совпадений можно использовать `.includes`:
 
@@ -666,6 +795,26 @@ let foo = false, bar = true;
 ```
 let foo = false;
 let bar = true;
+```
+
+#### Объявлять объекты с помощью let, только если в последующем они полностью переназначаются.
+```
+revokedAccesses() {
+  let result = {};
+  // ...
+  result = { ... };
+  // ...
+  return result;
+}
+```
+```
+revokedAccesses() {
+  const result = {};
+  // ...
+  result[key] = ... ;
+  // ...
+  return result;
+}
 ```
 
 #### Нельзя нескольким переменным присваивать одно и то же значение
@@ -998,10 +1147,10 @@ if (userProjects.length > 0) {
 if (request.sum == 100) {
   // ...
 }
-if (!request.sum) {
+if (!request.types.length) {
   // ...
 }
-if (!bill.comment) {
+if (!request.description) {
   // ...
 }
 ```
@@ -1010,7 +1159,10 @@ if (!bill.comment) {
 if (Number(request.sum) === 100) {
   // ...
 }
-if (bill.comment === '') {
+if (request.types.length === 0) {
+  // ...
+}
+if (request.description === '') {
   // ...
 }
 ```
@@ -1053,24 +1205,26 @@ if (!user.is_registered) {
 if (bill.isPaid() == true) {
   // ...
 }
-if (bill.isPaid() !== false) {
-  // ...
-}
-if (!bill.isPaid() === true) {
-  // ...
-}
-if (!(!bill.isPaid() === true)) {
-  // ...
-}
-if (Boolean(phone.is_external) === true) {
-  // ...
-}
 ```
 Хорошо:
 ```
 if (bill.isPaid()) {
     // ...
 }
+```
+
+#### Не возвращать из метода Boolean по условию
+Плохо:
+```
+if (this.transactions.length === 0) {
+  return true;
+} else {
+  return false;
+}
+```
+Хорошо:
+```
+return this.transactions.length === 0;
 ```
 
 #### Проверять переменные надо на наличие позитивного вхождения, а не отсутствие негативного
@@ -1131,6 +1285,134 @@ if (isMobile || (isSizeTooBig && isAllowedToShrink)) {
 });
 ```
 
+#### Тернарные операторы указывать в одну строку:
+Чаще всего, если тернарный оператор хочется указать не в одну строку, стоит разбить условие или использовать if/else:
+
+Плохо:
+```
+return this.page === 'index'
+         ? this.$platform.access.hasAccess('wiki.space_management') || this.$platform.access.hasAccess('wiki.space_create')
+         : this.space && this.space.can_edit;
+```
+
+Хорошо:
+```
+const hasAccess = this.$platform.access.hasAccess('wiki.space_management') || this.$platform.access.hasAccess('wiki.space_create');
+const spaceIsEditable = Boolean(this.space && this.space.can_edit);
+return this.page === 'index' ? hasAccess : spaceIsEditable;
+```
+```
+if (this.page === 'index') {
+  return this.$platform.access.hasAccess('wiki.space_management') || this.$platform.access.hasAccess('wiki.space_create');
+}
+return Boolean(this.space && this.space.can_edit);
+```
+
+Допустимо использовать перенос тернарного оператора только при присваивании значения:
+```
+const message = hasLicense
+  ? 'Оплаченный период истек. Необходимо приобрести новую лицензию для продолжения работы.'
+  : 'Ваша учетная запись не активирована в проекте. Обратитесь к администратору.';
+```
+
 ### Стилизация
-#### Цвета
+
+#### Тэг style должен быть единственным в компоненте и иметь параметр scoped
+
+#### Пример правильного оформления стилей
+```
+<style lang="less" scoped> /* рекомендуется использовать Less */
+@borderColor: #ebebeb; /* переменные без отступа сверху, всегда выше стилей */
+
+.request-btn { /* всегда отступ в одну строку сверху */
+  border-color: @borderColor; /* стили без отступа сверху */
+
+  &:hover { /* у внутренних блоков всегда отступ в одну строку сверху */
+    color: red;
+  }
+}
+</style>
+```
+
+#### Селекторы должны следовать в том же порядке, что и элементы в разметке шаблона
+Хорошо:
+```
+<template>
+  <header class="page-header">
+    <h1 class="title">...</h1>
+  </header>
+  <main class="page-content">
+    <ul class="products">
+      <li class="product"></li>
+      // ...
+    </ul>
+    <p class="message">...</p>
+  </main>
+</template>
+
+<style scoped>
+  .page-header {
+    // ...
+  }
+
+  .title {
+    // ...
+  }
+
+  .page-content {
+    // ...
+  }
+
+  .products {
+    // ...
+  }
+
+  .product {
+    // ...
+  }
+
+  .message {
+    // ...
+  }
+</style>
+```
+
+### Рекомендуется использовать & только для ссылки на родителя
+Важно не использовать & для конкатенации селектора - полнота селектора облегчает навигацию по стилям компонента
+
+Плохо:
+```
+.request-btn {
+  &-popover-content {
+    font-size: 12px;
+  }
+}
+```
+
+Хорошо:
+```
+.request-btn {
+  color: #409EFF;
+}
+
+.request-btn-popover-content {
+  font-size: 12px;
+}
+```
+
+#### Запрещено использование /deep/
+
+#### Классы-модификаторы следует использовать только внутри селектора основного класса
+```
+.request-btn {
+  &.active {
+    background-color: white;
+  }
+}
+```
+
+#### Запрещено дублировать стили. 
+Одинаковые стили, используемые в нескольких компонентах, необходимо выносить в отдельный файл в формате миксина или переменной.
+
+#### Формат цвета
 Цвет следует описывать шестизначным hex. Если заливка требует указания непрозрачности - rgba.
